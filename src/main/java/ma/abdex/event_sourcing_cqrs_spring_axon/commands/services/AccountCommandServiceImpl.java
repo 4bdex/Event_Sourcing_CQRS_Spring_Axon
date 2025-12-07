@@ -24,6 +24,7 @@ public class AccountCommandServiceImpl implements AccountCommandService {
     @Override
     public CompletableFuture<String> debitAccount(DebitAccountRequestDTO debitAccountRequestDTO) {
         return commandGateway.send(new DebitAccountCommand(
+                debitAccountRequestDTO.getAccountId(),
                 debitAccountRequestDTO.getAmount(),
                 debitAccountRequestDTO.getCurrency()
         ));
@@ -32,6 +33,7 @@ public class AccountCommandServiceImpl implements AccountCommandService {
     @Override
     public CompletableFuture<String> creditAccount(CreditAccountRequestDTO creditAccountRequestDTO) {
          return commandGateway.send(new CreditAccountCommand(
+                 creditAccountRequestDTO.getAccountId(),
                  creditAccountRequestDTO.getAmount(),
                  creditAccountRequestDTO.getCurrency()
         ));
