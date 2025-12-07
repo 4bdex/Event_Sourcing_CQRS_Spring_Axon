@@ -2,6 +2,9 @@ package ma.abdex.event_sourcing_cqrs_spring_axon.commands.aggregates;
 
 
 import lombok.extern.slf4j.Slf4j;
+import ma.abdex.event_sourcing_cqrs_spring_axon.commands.commands.CreditAccountCommand;
+import ma.abdex.event_sourcing_cqrs_spring_axon.commands.commands.DebitAccountCommand;
+import ma.abdex.event_sourcing_cqrs_spring_axon.commands.excepetions.InsufficientBalanceException;
 import ma.abdex.event_sourcing_cqrs_spring_axon.enums.AccountStatus;
 import ma.abdex.event_sourcing_cqrs_spring_axon.events.*;
 
@@ -20,7 +23,6 @@ import java.math.BigDecimal;
 @Slf4j
 public class AccountAggregate {
     @AggregateIdentifier
-    //@Id
     private String accountId;
     private BigDecimal balance;
     private String currency;
@@ -28,6 +30,7 @@ public class AccountAggregate {
 
     public AccountAggregate() {
     }
+
     @CommandHandler
     public AccountAggregate(CreateAccountCommand createAccountCommand) {
         log.info("CreateAccountCommand Received");
@@ -37,7 +40,7 @@ public class AccountAggregate {
                         createAccountCommand.getBalance(),
                         createAccountCommand.getCurrency(),
                         AccountStatus.CREATED
-                        )
+                )
         );
     }
     @EventSourcingHandler
@@ -48,6 +51,52 @@ public class AccountAggregate {
         this.currency=accountCreatedEvent.getCurrency();
         this.status=String.valueOf(accountCreatedEvent.getStatus());
         AggregateLifecycle.apply(new AccountActivatedEvent(this.accountId,AccountStatus.ACTIVATED));
+    }
+
+    @EventSourcingHandler
+    public void on(AccountActivatedEvent accountActivatedEvent){
+        log.info("AccountActivatedEvent Occured");
+        this.status=String.valueOf(accountActivatedEvent.getStatus());
+    }
+
+    @CommandHandler
+    public void on(DebitAccountCommand debitAccountCommand){
+        if((this.balance.doubleValue()>0)&&(this.balance.subtract(debitAccountCommand.getAmount()).doubleValue()<0)){
+            throw new InsufficientBalanceException("Insufficient Balance=>"+this.balance.doubleValue());
+        } else
+            AggregateLifecycle.apply(
+                    new AccountDebitedEvent(
+                            debitAccountCommand.getId(),
+                            debitAccountCommand.getAmount(),
+                            debitAccountCommand.getCurrency()
+                    )
+            );
+    }
+
+    @EventSourcingHandler
+    public void on(AccountDebitedEvent accountDebitedEvent){
+        log.info("AccountDebitedEvent Occured");
+        this.balance=this.balance.subtract(accountDebitedEvent.getAmount());
+        System.out.println(this.balance);
+    }
+    @EventSourcingHandler
+    public void on(AccountHeldEvent accountHeldEvent){
+        this.status=String.valueOf(accountHeldEvent.getStatus());
+    }
+    @CommandHandler
+    public void on(CreditAccountCommand creditAccountCommand){
+        AggregateLifecycle.apply(new AccountCreditedEvent(
+                creditAccountCommand.getId(),
+                creditAccountCommand.getAmount(),
+                creditAccountCommand.getCurrency()
+        ));
+    }
+    @EventSourcingHandler
+    public void on(AccountCreditedEvent accountCreditedEvent){
+        this.balance=this.balance.add(accountCreditedEvent.getAmount());
+        log.info("==================");
+        log.info(this.balance.toString());
+        log.info("==================");
     }
 
 }
