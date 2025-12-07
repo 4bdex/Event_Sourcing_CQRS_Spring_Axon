@@ -1,0 +1,20 @@
+package ma.abdex.event_sourcing_cqrs_spring_axon.queries.services;
+
+import org.axonframework.eventsourcing.eventstore.DomainEventStream;
+import org.axonframework.eventsourcing.eventstore.EventStore;
+import org.springframework.stereotype.Service;
+
+@Service
+public class EventSourcingServiceImpl implements EventSourcingService {
+    private final EventStore eventStore;
+
+    public EventSourcingServiceImpl(EventStore eventStore) {
+        this.eventStore = eventStore;
+    }
+
+    @Override
+    public DomainEventStream eventsByAccountId(String accountId) {
+        DomainEventStream domainEventStream = eventStore.readEvents(accountId);
+        return domainEventStream;
+    }
+}
